@@ -1,19 +1,28 @@
-import os
-from pydantic import BaseModel
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Ruta al archivo .env dentro del directorio bff/
+ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
 
 
-class Settings(BaseModel):
+class Settings(BaseSettings):
     # Credenciales y URLs de RENIEC
-    RENIEC_BASE_URL: str = os.getenv("RENIEC_BASE_URL", "https://idaas2.reniec.gob.pe")
-    RENIEC_CLIENT_ID: str = os.getenv("RENIEC_CLIENT_ID", "tu_client_id")
-    RENIEC_CLIENT_SECRET: str = os.getenv("RENIEC_CLIENT_SECRET", "tu_client_secret")
-    RENIEC_REFERER: str = os.getenv("RENIEC_REFERER", "santander.com.pe")
+    RENIEC_BASE_URL: str = "https://idaas2.reniec.gob.pe"
+    RENIEC_CLIENT_ID: str = "tu_client_id"
+    RENIEC_CLIENT_SECRET: str = "tu_client_secret"
+    RENIEC_REFERER: str = "santander.com.pe"
     
     # URL pública o webhook registrada ante RENIEC
-    URL_NOTIFY: str = os.getenv("URL_NOTIFY", "http://localhost:8000/api/auth/notify")
+    URL_NOTIFY: str = "http://localhost:8000/api/auth/notify"
     
     # Configuración de timeout y reintentos
-    REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "15"))
+    REQUEST_TIMEOUT: int = 15
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_PATH,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 settings = Settings()
