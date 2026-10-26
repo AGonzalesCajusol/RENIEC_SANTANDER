@@ -1,3 +1,4 @@
+import { useAuthStatus } from '../hooks/useAuthStatus'
 import { useCallback, useState } from 'react'
 import AuthenticationQR from '../components/AuthenticationQR'
 import AuthenticationResult from '../components/AuthenticationResult'
@@ -18,6 +19,21 @@ export default function AuthenticationPage() {
   const [resultStatus, setResultStatus] = useState<AuthStatus>('pending')
   const [resultMessage, setResultMessage] = useState('')
   const [error, setError] = useState('')
+
+  const { result: authStatus, error: statusError } = useAuthStatus({
+    transactionId: transaction?.transactionId ?? null,
+    enabled: pageState === 'qr',
+    interval: transaction?.interval ?? 5,
+  })
+
+
+
+  const backendFinished =
+    pageState === 'qr' &&
+    authStatus !== null &&
+    authStatus.status !== 'pending'
+
+  const visibleState = backendFinished ? 'result' : pageState
 
   const reset = useCallback(() => {
     setPageState('form')
@@ -114,13 +130,19 @@ export default function AuthenticationPage() {
           <p role="status">Iniciando autenticación...</p>
         )}
 
-        {pageState === 'qr' && transaction && (
+        {visibleState === 'qr' && transaction && (
           <>
             <AuthenticationQR
               transaction={transaction}
               onCancel={reset}
               onExpired={handleExpired}
             />
+
+            {statusError && (
+              <p className="auth-error" role="alert">
+                Error consultando estado: {statusError}
+              </p>
+            )}
 
             <div className="mock-controls">
               <p>Controles de prueba (sin conexión a RENIEC)</p>
@@ -142,10 +164,10 @@ export default function AuthenticationPage() {
           </>
         )}
 
-        {pageState === 'result' && (
+        {visibleState === 'result' && (
           <AuthenticationResult
-            status={resultStatus}
-            message={resultMessage}
+            status={backendFinished ? authStatus.status : resultStatus}
+            message={backendFinished ? authStatus.message : resultMessage}
             onRetry={reset}
           />
         )}
