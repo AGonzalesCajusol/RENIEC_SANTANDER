@@ -1,6 +1,16 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from core.database import init_db
 from routers import auth, health
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Inicializa las tablas de PostgreSQL al arrancar el BFF
+    init_db()
+    yield
+
 
 app = FastAPI(
     title="BFF ID-Perú CIBA - Santander",
@@ -9,6 +19,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 # Configuración de CORS para permitir peticiones desde el frontend

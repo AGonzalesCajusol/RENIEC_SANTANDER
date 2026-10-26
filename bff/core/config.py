@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Configuración de timeout y reintentos
     REQUEST_TIMEOUT: int = 15
 
+    # Base de Datos PostgreSQL
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5435/reniec_santander_db"
+
     model_config = SettingsConfigDict(
         env_file=ENV_PATH,
         env_file_encoding="utf-8",
