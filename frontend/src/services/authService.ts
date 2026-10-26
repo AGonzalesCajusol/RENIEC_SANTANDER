@@ -1,4 +1,4 @@
-﻿import { apiRequest } from './apiClient'
+import { apiRequest } from './apiClient'
 import type {
   StartAuthRequest,
   StartAuthResponse,
@@ -30,10 +30,30 @@ export const authService = {
       }
     }
 
-    return apiRequest<StartAuthResponse>('/api/auth/start', {
+    interface BackendStartResponse {
+      message: string
+      qr: string
+      transactionId?: string
+      expiresIn?: number
+      interval?: number
+    }
+
+    const payload = {
+      login_hint: request.dni,
+      acr_values: request.method,
+    }
+
+    const response = await apiRequest<BackendStartResponse>('/api/auth/start', {
       method: 'POST',
-      body: JSON.stringify(request),
+      body: JSON.stringify(payload),
     })
+
+    return {
+      transactionId: response.transactionId || crypto.randomUUID(),
+      qr: response.qr,
+      expiresIn: response.expiresIn || 600,
+      interval: response.interval || 5,
+    }
   },
 
   async getAuthStatus(
