@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Header
+from core.security import generar_pkce, validar_jwt_reniec
 from schemas.auth import (
     AuthStartRequest,
     AuthStartResponse,
@@ -21,8 +22,15 @@ def iniciar_autenticacion(data: AuthStartRequest):
     3. Guarda los datos transaccionales en base de datos (ej. PostgreSQL).
     4. Retorna el 'qr' al frontend.
     """
-    # Lógica de BFF aquí...
-    return {"message": "Transacción iniciada", "qr": "VALOR_QR_DE_EJEMPLO"}
+    # Generación de PKCE para el flujo CIBA
+    pkce_data = generar_pkce()
+    # pkce_data["code_verifier"] -> Se almacenará en BD junto con el session/auth_req_id
+    # pkce_data["code_challenge"] y "S256" -> Se envían a /service/bc-authorize
+
+    return {
+        "message": "Transacción iniciada con PKCE generado",
+        "qr": "VALOR_QR_DE_EJEMPLO",
+    }
 
 
 @router.post(
@@ -50,13 +58,21 @@ def endpoint_notificacion(
 
 @router.post(
     "/token",
-    response_model=AuthTokenResponse,
-    summary="Consultar / canjear tokens con RENIEC",
+    summary="Consultar / canjear tokens con RENIEC y validar criptográficamente",
 )
 def consultar_tokens(auth_req_id: str):
     """
-    Consulta POST /service/ciba/token usando el code_verifier y auth_req_id.
-    Valida el JWT resultante usando las llaves JWKS de RENIEC.
+    1. Consulta POST /service/ciba/token usando code_verifier y auth_req_id.
+    2. Valida el JWT resultante usando las llaves JWKS de RENIEC (RS256).
     """
-    # Lógica de canje de tokens y validación criptográfica
-    return {"access_token": "JWT_DE_ACCESO", "id_token": "JWT_DE_IDENTIDAD"}
+    # Simulación de respuesta de tokens obtenida tras canje
+    tokens_ejemplo = {
+        "access_token": "JWT_DE_ACCESO_EJEMPLO",
+        "id_token": "JWT_DE_IDENTIDAD_EJEMPLO",
+    }
+
+    # Ejemplo de validación criptográfica con JWKS de RENIEC
+    # resultado_validacion = validar_jwt_reniec(tokens_ejemplo["id_token"])
+
+    return tokens_ejemplo
+
