@@ -82,6 +82,20 @@ export default function AuthenticationPage() {
     setPageState('result')
   }, [])
 
+  const handleManualCheck = async () => {
+    if (!transaction) return
+    try {
+      const resp = await authService.getAuthStatus(transaction.transactionId)
+      if (resp.status !== 'pending') {
+        setResultStatus(resp.status)
+        setResultMessage(resp.message ?? '')
+        setPageState('result')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al consultar estado.')
+    }
+  }
+
   return (
     <main className="auth-page">
       <section className="auth-card">
@@ -136,6 +150,7 @@ export default function AuthenticationPage() {
               transaction={transaction}
               onCancel={reset}
               onExpired={handleExpired}
+              onConfirmManual={handleManualCheck}
             />
 
             {statusError && (

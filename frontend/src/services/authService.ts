@@ -32,7 +32,8 @@ export const authService = {
 
     interface BackendStartResponse {
       message: string
-      qr: string
+      qr?: string | null
+      auth_req_id?: string | null
       transactionId?: string
       expiresIn?: number
       interval?: number
@@ -49,8 +50,8 @@ export const authService = {
     })
 
     return {
-      transactionId: response.transactionId || crypto.randomUUID(),
-      qr: response.qr,
+      transactionId: response.auth_req_id || response.transactionId || crypto.randomUUID(),
+      qr: response.qr || 'idperu://auth-iniciada',
       expiresIn: response.expiresIn || 600,
       interval: response.interval || 5,
     }
@@ -69,9 +70,38 @@ export const authService = {
       }
     }
 
-    return apiRequest<AuthStatusResponse>(
+    interface BackendStatusResponse {
+      auth_req_id: string
+      status: string
+      message?: string
+      transactionId?: string
+    }
+
+    const data = await apiRequest<BackendStatusResponse>(
       `/api/auth/${encodeURIComponent(transactionId)}/status`
     )
+
+    // Normalizar estados del backend (PENDING, APPROVED, REJECTED, EXPIRED)
+    // hacia los tipos esperados por el frontend (pending, success, rejected, expired)
+    let mappedStatus: AuthStatusResponse['status'] = 'pending'
+    const s = data.status.toUpperCase()
+    if (s === 'APPROVED' || s === 'SUCCESS') {
+      mappedStatus = 'success'
+    } else if (s === 'REJECTED') {
+      mappedStatus = 'rejected'
+    } else if (s === 'EXPIRED') {
+      mappedStatus = 'expired'
+    } else if (s === 'PENDING') {
+      mappedStatus = 'pending'
+    } else {
+      mappedStatus = 'error'
+    }
+
+    return {
+      transactionId: data.transactionId || data.auth_req_id || transactionId,
+      status: mappedStatus,
+      message: data.message,
+    }
   },
 
   async getAuthResult(
