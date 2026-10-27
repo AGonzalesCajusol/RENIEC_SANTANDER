@@ -19,14 +19,35 @@ def parse_sd_jwt_claims(vc_raw: str) -> Dict[str, Any]:
     Decodifica una credencial SD-JWT (Selective Disclosure JWT) según el estándar de Inji / RENIEC.
     Formato: <JWT_EMISOR>~<DISCLOSURE_1>~<DISCLOSURE_2>~...~<KB_JWT>
 
-    Cada disclosure es una tupla JSON codificada en Base64URL: [sal, nombre_campo, valor]
+    Extrae tanto los metadatos públicos del emisor (RENIEC) como los atributos revelados en disclosures.
     """
     claims: Dict[str, Any] = {}
     if not vc_raw:
         return claims
 
     parts = vc_raw.split("~")
-    # Los disclosures son las partes intermedias (entre la cabecera/cuerpo del emisor y el key binding jwt final)
+
+    # 1. Metadatos generales del JWT del Emisor (RENIEC)
+    if parts[0]:
+        try:
+            jwt_parts = parts[0].split(".")
+            if len(jwt_parts) >= 2:
+                payload = json.loads(decode_base64url(jwt_parts[1]).decode("utf-8"))
+                # Guardamos información institucional relevante
+                if "vct" in payload:
+                    claims["_tipo_credencial"] = payload["vct"]
+                if "iss" in payload:
+                    claims["_emisor"] = payload["iss"]
+                if "validFrom" in payload:
+                    claims["_valido_desde"] = payload["validFrom"]
+                if "validUntil" in payload:
+                    claims["_valido_hasta"] = payload["validUntil"]
+                if "issuanceDate" in payload:
+                    claims["_fecha_emision"] = payload["issuanceDate"]
+        except Exception as e:
+            logger.debug(f"No se pudo extraer el payload del emisor: {e}")
+
+    # 2. Atributos compartidos por el ciudadano (Disclosures)
     for part in parts[1:]:
         if not part:
             continue
@@ -38,7 +59,6 @@ def parse_sd_jwt_claims(vc_raw: str) -> Dict[str, Any]:
                 _, claim_name, claim_value = parsed[0], parsed[1], parsed[2]
                 claims[claim_name] = claim_value
         except Exception as e:
-            # Si no es un disclosure parseable (ej. key binding jwt o padding), se omite
             logger.debug(f"Segmento omitido o no es disclosure SD-JWT: {e}")
 
     return claims

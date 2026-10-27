@@ -172,32 +172,81 @@ export const DniDigitalVerification: React.FC = () => {
       {/* PANTALLA 3: CONFIRMACIÓN Y ÉXITO */}
       {/* ============================================================== */}
       {screen === 'screen3' && (
-        <div style={styles.card}>
+        <div style={{ ...styles.card, maxWidth: 520 }}>
           <div style={styles.successIcon}>✓</div>
           <h2 style={styles.title}>¡Identidad Verificada!</h2>
           <p style={styles.description}>
-            La autenticación con <strong>RENIEC Perú Pass</strong> se completó con éxito total.
+            La credencial digital de <strong>RENIEC Perú Pass</strong> ha sido validada criptográficamente con éxito.
           </p>
 
           <div style={styles.dataCard}>
+            <div style={styles.sectionHeader}>📋 Datos del Ciudadano</div>
+            
+            {verifiedResult?.CUI_DNI && (
+              <div style={styles.dataRow}>
+                <span style={styles.dataLabel}>DNI:</span>
+                <span style={styles.dataValueBadge}>{verifiedResult.CUI_DNI}</span>
+              </div>
+            )}
+
+            {verifiedResult?.PRENOMBRES && (
+              <div style={styles.dataRow}>
+                <span style={styles.dataLabel}>Nombres y Apellidos:</span>
+                <span style={styles.dataValue}>{verifiedResult.PRENOMBRES}</span>
+              </div>
+            )}
+
+            {verifiedResult?.NACIONALIDAD && (
+              <div style={styles.dataRow}>
+                <span style={styles.dataLabel}>Nacionalidad:</span>
+                <span style={styles.dataValue}>{verifiedResult.NACIONALIDAD}</span>
+              </div>
+            )}
+
+            {verifiedResult?.FECHA_NACIMIENTO && (
+              <div style={styles.dataRow}>
+                <span style={styles.dataLabel}>Fecha de Nacimiento:</span>
+                <span style={styles.dataValue}>{verifiedResult.FECHA_NACIMIENTO}</span>
+              </div>
+            )}
+
+            {/* Mapeo dinámico de cualquier otro campo extra que se haya compartido */}
+            {Object.entries(verifiedResult || {})
+              .filter(([key]) => !['_tipo_credencial', '_emisor', '_valido_desde', '_valido_hasta', '_fecha_emision', 'CUI_DNI', 'PRENOMBRES', 'NACIONALIDAD', 'FECHA_NACIMIENTO'].includes(key))
+              .map(([key, val]) => (
+                <div style={styles.dataRow} key={key}>
+                  <span style={styles.dataLabel}>{key}:</span>
+                  <span style={styles.dataValue}>{String(val)}</span>
+                </div>
+              ))}
+
+            <div style={{ ...styles.sectionHeader, marginTop: 14 }}>🔒 Datos Criptográficos / Verificador</div>
+
             <div style={styles.dataRow}>
-              <span style={styles.dataLabel}>DNI:</span>
-              <span style={styles.dataValue}>{verifiedResult?.CUI_DNI || 'Verificado'}</span>
+              <span style={styles.dataLabel}>Tipo de Credencial:</span>
+              <span style={styles.dataValue}>{verifiedResult?._tipo_credencial || 'DniPeruanoCredential'}</span>
             </div>
+
             <div style={styles.dataRow}>
-              <span style={styles.dataLabel}>Titular:</span>
-              <span style={styles.dataValue}>
-                {verifiedResult?.PRENOMBRES} {verifiedResult?.PRIMER_APELLIDO} {verifiedResult?.SEGUNDO_APELLIDO || ''}
-              </span>
+              <span style={styles.dataLabel}>Emisor Autorizado:</span>
+              <span style={styles.dataValue}>{verifiedResult?._emisor || 'RENIEC (certify.inji-reniec.com)'}</span>
             </div>
+
+            {verifiedResult?._fecha_emision && (
+              <div style={styles.dataRow}>
+                <span style={styles.dataLabel}>Fecha de Emisión:</span>
+                <span style={styles.dataValue}>{new Date(verifiedResult._fecha_emision).toLocaleString()}</span>
+              </div>
+            )}
+
             <div style={styles.dataRow}>
-              <span style={styles.dataLabel}>Canal:</span>
-              <span style={styles.dataValue}>OpenID4VP (Perú Pass)</span>
+              <span style={styles.dataLabel}>Protocolo:</span>
+              <span style={styles.dataValue}>OpenID4VP • SD-JWT Verificado</span>
             </div>
           </div>
 
           <button style={styles.primaryButton} onClick={handleReset}>
-            Continuar con el trámite bancario
+            Iniciar nueva verificación
           </button>
         </div>
       )}
@@ -352,9 +401,28 @@ const styles: Record<string, React.CSSProperties> = {
   dataRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    padding: '6px 0',
+    padding: '8px 0',
     fontSize: 13,
     borderBottom: '1px solid #f3f4f6',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionHeader: {
+    fontSize: 12,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    color: '#9ca3af',
+    letterSpacing: '0.05em',
+    marginBottom: 8,
+  },
+  dataValueBadge: {
+    backgroundColor: '#eff6ff',
+    color: '#1d4ed8',
+    fontWeight: 700,
+    padding: '2px 8px',
+    borderRadius: 6,
+    fontSize: 14,
+    fontFamily: 'monospace',
   },
   dataLabel: {
     color: '#6b7280',
