@@ -44,6 +44,6 @@ def health_check_reniec():
         return {
             "status": "DOWN",
             "reniec_base_url": settings.RENIEC_BASE_URL,
-            "connected": false,
+            "connected": False,
             "error": str(exc),
         }

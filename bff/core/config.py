@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     REQUEST_TIMEOUT: int = 15
 
     # Base de Datos PostgreSQL
-    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5435/reniec_santander_db"
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@127.0.0.1:5435/reniec_santander_db"
 
     model_config = SettingsConfigDict(
         env_file=ENV_PATH,
