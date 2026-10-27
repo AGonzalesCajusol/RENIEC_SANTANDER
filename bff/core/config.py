@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # Base de Datos PostgreSQL
     DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@127.0.0.1:5435/reniec_santander_db"
 
+    # Módulo de Verificación de DNI Digital (Inji Verify - RENIEC Oficial)
+    VERIFY_SERVICE_INTERNAL_URL: str = "https://verify.inji-reniec.com/v1/verify"
+    VERIFY_SERVICE_PUBLIC_URL: str = "https://verify.inji-reniec.com/v1/verify"
+    VERIFY_CLIENT_ID: str = "did:web:verify.inji-reniec.com:v1:verify"
+    VERIFY_PRESENTATION_DEFINITION_ID: str = "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+    VERIFY_POLLING_TIMEOUT_SEC: float = 2.0
+
     model_config = SettingsConfigDict(
         env_file=ENV_PATH,
         env_file_encoding="utf-8",

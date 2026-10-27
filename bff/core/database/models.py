@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
+import sqlalchemy as sa
 from sqlmodel import SQLModel, Field, Column, JSON
 
 
@@ -34,5 +35,30 @@ class CibaTransaction(SQLModel, table=True):
 
     # Tokens JWT y claims de identidad verificados
     tokens: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    claims: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    error_detail: Optional[str] = Field(default=None)
+
+
+class VerifySession(SQLModel, table=True):
+    """
+    Tabla de resguardo de sesiones de verificación de credenciales DNId (Perú Pass / Inji Verify).
+    """
+    __tablename__ = "verify_sessions"
+
+    request_id: str = Field(primary_key=True, index=True, max_length=255)
+    transaction_id: str = Field(index=True, max_length=255)
+    client_id: str = Field(max_length=255)
+    presentation_definition_id: str = Field(max_length=100)
+    request_uri: str = Field(max_length=1000)
+    qr_data: str = Field(max_length=2000)
+
+    # Estado de la verificación: PENDING, VP_SUBMITTED, COMPLETED, EXPIRED, FAILED
+    status: str = Field(default="PENDING", index=True, max_length=30)
+    expires_at: Optional[int] = Field(default=None, sa_column=Column(sa.BigInteger))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: Optional[datetime] = Field(default=None)
+
+    # Credencial SD-JWT y datos extraídos
+    vc_raw: Optional[str] = Field(default=None)
     claims: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     error_detail: Optional[str] = Field(default=None)

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from core.database import init_db
-from routers import auth, health
+from routers import auth, health, dni_digital
 
 
 @asynccontextmanager
@@ -37,5 +37,6 @@ app.add_middleware(
 # Registro de routers desacoplados
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/api")
+app.include_router(dni_digital.router, prefix="/api")
 
 
