@@ -74,6 +74,20 @@ Permite validar la identidad del cliente mediante su **DNI Digital** emitido en 
 
 Flujo desacoplado en el que el BFF solicita la autorización a ID-Perú (`/service/bc-authorize`) enviando desafío PKCE (`code_challenge`) y un `client_notification_token`. Al autorizarse en la app ID-Perú, RENIEC notifica vía webhook (`url_notify`) al BFF para que este obtenga los tokens definitivos (`/service/ciba/token`).
 
+### Checklist de Requisitos e Integración CIBA
+
+| # | Requisito / Variable | Descripción | Estado / Acción Requerida |
+| :-: | :--- | :--- | :---: |
+| 1 | **Convenio Institucional** | Autorización y convenio vigente de interoperabilidad con RENIEC. | Requisito Legal previo |
+| 2 | **`RENIEC_BASE_URL`** | URL base de ID-Perú (`https://idaas2.reniec.gob.pe`). | ✅ Configurado |
+| 3 | **`RENIEC_CLIENT_ID`** | Identificador de cliente asignado formalmente por RENIEC a Santander. | Credencial entregada por RENIEC |
+| 4 | **`RENIEC_CLIENT_SECRET`** | Secreto de cliente asignado por RENIEC (resguardado en el BFF). | Credencial entregada por RENIEC |
+| 5 | **`RENIEC_REFERER`** | Dominio corporativo (`santander.com.pe`) dado de alta en el WAF de RENIEC. | ✅ Configurado |
+| 6 | **`URL_NOTIFY`** | URL pública del Webhook (`https://dominio-banco/api/auth/notify`) **registrada formalmente ante RENIEC**. | Requiere dominio/IP pública registrada |
+| 7 | **Conectividad de Red** | Conectividad saliente HTTPS a `idaas2.reniec.gob.pe` y puerto 443 abierto para webhook. | Configuración Firewall / DMZ |
+| 8 | **`DATABASE_URL`** | Conexión a base de datos PostgreSQL (`ciba_transactions`). | ✅ Configurado y operativo |
+| 9 | **App Móvil ID Perú** | App **ID Perú** instalada en el teléfono para biometría facial (`face_mobile`) o DNIe (`pki_dnie`). | Del lado del usuario |
+
 ---
 
 ## 📂 Estructura del Proyecto
@@ -183,6 +197,7 @@ uv run pytest
 
 ## 📚 Referencias Técnicas
 Para consultar las especificaciones técnicas completas y detalladas, diríjase a la carpeta [`.specs/`](file:///home/wecbxxx/PycharmProjects/RENIEC_SANTANDER/.specs):
+* [Guía de Actualización del BFF y Frontend](.specs/Guia_Actualizacion_BFF_Frontend.md)
 * [Especificación del Flujo de Verificación (DNI Digital)](.specs/especificacion_flujo_verificacion.md)
 * [Arquitectura de Verificación y Componentes](.specs/arquitectura_verificacion.md)
 * [Especificación Técnica ID-Perú CIBA v1.3](.specs/Especificacion_Tecnica_ID_Peru_CIBA.md)

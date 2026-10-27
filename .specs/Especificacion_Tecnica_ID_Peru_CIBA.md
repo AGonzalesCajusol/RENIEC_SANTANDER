@@ -79,7 +79,25 @@ sequenceDiagram
 
 ## 3. ESPECIFICACIÓN TÉCNICA DEL BFF
 
-### 3.1. Parámetros de Configuración y Seguridad
+### 3.1. Requisitos Previos y Checklist de Configuración
+
+Para poner en producción o pruebas el flujo CIBA con RENIEC, la entidad debe validar el cumplimiento del siguiente checklist:
+
+| # | Requisito / Variable | Descripción | Estado / Acción Requerida |
+| :-: | :--- | :--- | :---: |
+| 1 | **Convenio Institucional** | Autorización y convenio vigente de interoperabilidad entre Santander y RENIEC. | Requisito Legal previo |
+| 2 | **`RENIEC_BASE_URL`** | URL base de la plataforma ID-Perú IdAAS (`https://idaas2.reniec.gob.pe`). | ✅ Configurado |
+| 3 | **`RENIEC_CLIENT_ID`** | Identificador único de cliente asignado formalmente por RENIEC a Santander. | Credencial entregada por RENIEC |
+| 4 | **`RENIEC_CLIENT_SECRET`** | Secreto de cliente asignado por RENIEC. Debe resguardarse exclusivamente en el BFF. | Credencial entregada por RENIEC |
+| 5 | **`RENIEC_REFERER`** | Dominio corporativo del banco (`santander.com.pe`) dado de alta en el WAF/Firewall de RENIEC. | ✅ Configurado |
+| 6 | **`URL_NOTIFY`** | URL pública del Webhook del BFF (`https://dominio-banco/api/auth/notify`) **registrada formalmente ante RENIEC**. | Requiere dominio/IP pública registrada |
+| 7 | **Conectividad de Red** | El servidor del BFF debe tener salida HTTPS a `idaas2.reniec.gob.pe` y puerto 443 abierto para recibir el webhook. | Configuración Firewall / DMZ |
+| 8 | **`DATABASE_URL`** | Conexión a base de datos PostgreSQL para el resguardo de sesiones, PKCE y tokens JWT. | ✅ Configurado y operativo |
+| 9 | **App Móvil ID Perú** | El ciudadano debe contar con la app **ID Perú** instalada en su celular para validar su biometría facial (`face_mobile`) o DNIe con chip (`pki_dnie`). | Del lado del usuario |
+
+---
+
+### 3.2. Parámetros de Configuración y Seguridad
 * **`RENIEC_BASE_URL`**: `https://idaas2.reniec.gob.pe`
 * **`RENIEC_CLIENT_ID`**: Identificador asignado por RENIEC a Santander.
 * **`RENIEC_CLIENT_SECRET`**: Secreto de cliente.
