@@ -85,11 +85,14 @@ export default function AuthenticationPage() {
   const handleManualCheck = async () => {
     if (!transaction) return
     try {
-      const resp = await authService.getAuthStatus(transaction.transactionId)
+      // Pasa checkReniec=true para consultar activamente /service/ciba/token a RENIEC
+      const resp = await authService.getAuthStatus(transaction.transactionId, true)
       if (resp.status !== 'pending') {
         setResultStatus(resp.status)
         setResultMessage(resp.message ?? '')
         setPageState('result')
+      } else {
+        setError('Aún no se detecta la autenticación en el celular. Por favor completa la validación en la app ID-Perú y vuelve a intentar.')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al consultar estado.')

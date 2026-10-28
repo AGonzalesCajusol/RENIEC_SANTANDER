@@ -58,7 +58,8 @@ export const authService = {
   },
 
   async getAuthStatus(
-    transactionId: string
+    transactionId: string,
+    checkReniec: boolean = false
   ): Promise<AuthStatusResponse> {
     if (MOCK_MODE) {
       await delay(300)
@@ -77,8 +78,9 @@ export const authService = {
       transactionId?: string
     }
 
+    const queryParam = checkReniec ? '?check_reniec=true' : ''
     const data = await apiRequest<BackendStatusResponse>(
-      `/api/auth/${encodeURIComponent(transactionId)}/status`
+      `/api/auth/${encodeURIComponent(transactionId)}/status${queryParam}`
     )
 
     // Normalizar estados del backend (PENDING, APPROVED, REJECTED, EXPIRED)

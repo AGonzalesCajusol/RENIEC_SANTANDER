@@ -1,8 +1,9 @@
 import hmac
+import logging
 import os
 from datetime import datetime, timezone
 import requests
-from fastapi import APIRouter, HTTPException, Header, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, Header, BackgroundTasks, Depends, Query
 from sqlmodel import Session, select
 from core.config import settings
 from core.database import CibaTransaction, get_session
@@ -18,6 +19,7 @@ from schemas.auth import (
 )
 
 router = APIRouter(prefix="/auth", tags=["ID-Perú CIBA Auth"])
+logger = logging.getLogger(__name__)
 
 
 def intercambiar_tokens_reniec_db(auth_req_id: str, session: Session) -> dict:
@@ -54,13 +56,31 @@ def intercambiar_tokens_reniec_db(auth_req_id: str, session: Session) -> dict:
 
     if response.status_code == 200:
         token_data = response.json()
-        tx.tokens = token_data
-        tx.status = "APPROVED"
-        tx.completed_at = datetime.now(timezone.utc)
+        
+        # Verificar si RENIEC respondió 200 pero con un mensaje de estado pendiente o error
+        codigo = str(token_data.get("codigo", ""))
+        mensaje = str(token_data.get("mensaje", ""))
 
-        # Validar y procesar JWT access_token
-        access_token = token_data.get("access_token")
-        if access_token:
+        if codigo == "20001" or "pendiente" in mensaje.lower():
+            tx.status = "PENDING"
+            session.add(tx)
+            session.commit()
+            return {"status": "PENDING", "message": mensaje}
+
+        if codigo == "20009" or "expirado" in mensaje.lower():
+            tx.status = "EXPIRED"
+            tx.error_detail = mensaje
+            session.add(tx)
+            session.commit()
+            return {"status": "EXPIRED", "message": mensaje}
+
+        if "access_token" in token_data:
+            tx.tokens = token_data
+            tx.status = "APPROVED"
+            tx.completed_at = datetime.now(timezone.utc)
+
+            # Validar y procesar JWT access_token
+            access_token = token_data.get("access_token")
             try:
                 claims = validar_jwt_reniec(access_token)
                 tx.claims = claims
@@ -74,9 +94,17 @@ def intercambiar_tokens_reniec_db(auth_req_id: str, session: Session) -> dict:
                         "document_number": tx.login_hint,
                         "name": "CIUDADANO VALIDADO",
                     }
-        session.add(tx)
-        session.commit()
-        return token_data
+            session.add(tx)
+            session.commit()
+            return token_data
+
+        # Si retornó otro código no exitoso dentro de 200 OK
+        if token_data.get("error"):
+            tx.status = "REJECTED"
+            tx.error_detail = mensaje or token_data.get("error")
+            session.add(tx)
+            session.commit()
+            return {"status": "REJECTED", "message": tx.error_detail}
 
     # Manejar respuestas controladas de RENIEC
     error_json = {}
@@ -261,10 +289,19 @@ def endpoint_notificacion(
 
 @router.get("/status", response_model=AuthStatusResponse, summary="Consulta de estado de la transacción CIBA")
 @router.get("/{auth_req_id}/status", response_model=AuthStatusResponse)
-def consultar_estado(auth_req_id: str, session: Session = Depends(get_session)):
+def consultar_estado(
+    auth_req_id: str,
+    check_reniec: bool = Query(
+        False,
+        description="Si es True, consulta activamente a RENIEC si el estado local aún es PENDING (ej: botón 'Ya me autentiqué')",
+    ),
+    session: Session = Depends(get_session),
+):
     """
-    Paso 10: Consulta del estado desde el frontend (nunca consulta directo a RENIEC).
-    Controla el respeto del intervalo mínimo para evitar rate-limiting.
+    Paso 10 y Sección 8.1.5 de la Especificación ID-Perú:
+    Consulta del estado desde el frontend.
+    Si check_reniec=True (o al confirmar el usuario) y el estado local sigue en PENDING,
+    el BFF consulta /service/ciba/token de ID-Perú usando el auth_req_id y code_verifier.
     """
     tx = session.get(CibaTransaction, auth_req_id)
     if not tx:
@@ -276,6 +313,14 @@ def consultar_estado(auth_req_id: str, session: Session = Depends(get_session)):
         tx.status = "EXPIRED"
         session.add(tx)
         session.commit()
+
+    # Si la transacción sigue en PENDING y se solicita chequeo activo o confirmación del usuario
+    if tx.status == "PENDING" and check_reniec:
+        try:
+            intercambiar_tokens_reniec_db(auth_req_id, session)
+            session.refresh(tx)
+        except Exception as exc:
+            logger.warning(f"Error consultando /service/ciba/token a RENIEC: {exc}")
 
     mensajes = {
         "PENDING": "Esperando autenticación del ciudadano en ID-Perú.",

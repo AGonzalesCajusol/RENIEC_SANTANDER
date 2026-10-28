@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { authService } from '../services/authService'
 import type { AuthStatusResponse } from '../types/auth.types'
 
@@ -15,6 +15,12 @@ export function useAuthStatus({
 }: Options) {
   const [result, setResult] = useState<AuthStatusResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Limpiar el resultado previo cada vez que cambie o se limpie el transactionId
+  useEffect(() => {
+    setResult(null)
+    setError(null)
+  }, [transactionId])
 
   useEffect(() => {
     if (!enabled || !transactionId) return
