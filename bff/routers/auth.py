@@ -12,6 +12,7 @@ from core.security.jwt_validator import validar_jwt_reniec
 from schemas.auth import (
     AuthStartRequest,
     AuthStartResponse,
+    AuthNotifyPayload,
     AuthNotifyResponse,
     AuthStatusResponse,
     AuthTokenResponse,
@@ -143,7 +144,25 @@ def _tarea_segundo_plano_token(auth_req_id: str):
         intercambiar_tokens_reniec_db(auth_req_id, session)
 
 
-@router.post("/start", response_model=AuthStartResponse, summary="Iniciar transacción OIDC CIBA")
+@router.post(
+    "/start",
+    response_model=AuthStartResponse,
+    summary="Iniciar transacción OIDC CIBA",
+    description="""
+Inicia una nueva transacción de autenticación CIBA contra la plataforma ID-Perú (RENIEC).
+
+**Acciones que ejecuta el BFF:**
+1. Valida el número de DNI y el método de autenticación (`face_mobile` para biometría facial o `pki_dnie` para DNIe).
+2. Genera los secretos criptográficos: `code_verifier` / `code_challenge` (PKCE S256) y el `client_notification_token` (secreto de 256 bits).
+3. Consume `POST /service/bc-authorize` en RENIEC incluyendo cabeceras de seguridad (`Referer` institucional).
+4. Persiste la transacción en PostgreSQL y devuelve el `qr` y `auth_req_id` al frontend.
+    """,
+    responses={
+        200: {"description": "Transacción CIBA iniciada exitosamente; contiene el código para QR o Deep Link"},
+        400: {"description": "Parámetros inválidos (ej. DNI no contiene 8 dígitos o método no soportado)"},
+        502: {"description": "Error al comunicarse con la plataforma RENIEC IdAAS"},
+    }
+)
 def iniciar_autenticacion(data: AuthStartRequest, session: Session = Depends(get_session)):
     """
     Paso 1-4 del Flujo CIBA:
@@ -250,11 +269,29 @@ def iniciar_autenticacion(data: AuthStartRequest, session: Session = Depends(get
     )
 
 
-@router.post("/notify", response_model=AuthNotifyResponse, summary="Webhook oficial url_notify de RENIEC")
+@router.post(
+    "/notify",
+    response_model=AuthNotifyResponse,
+    summary="Webhook oficial url_notify de RENIEC (ID-Perú CIBA)",
+    description="""
+Endpoint público registrado ante RENIEC al que el servidor IdAAS envía una notificación HTTP POST cuando el ciudadano concluye la autenticación biométrica en la aplicación móvil ID-Perú.
+
+**Requisitos de seguridad (Especificación técnica RENIEC v1.3 - Sección 8.1.5):**
+* **Cabecera `Authorization`:** Debe incluir `Bearer <client_notification_token>`. Se valida en tiempo constante para evitar ataques de temporización.
+* **Cuerpo:** JSON con `auth_req_id` y `status: "completed"`.
+* **Comportamiento:** Responde `200 OK {"status": "received"}` de inmediato y dispara una tarea en background para consultar los tokens definitivos a `/service/ciba/token`.
+    """,
+    responses={
+        200: {"description": "Notificación recibida y autenticada con éxito"},
+        400: {"description": "Cuerpo inválido (falta auth_req_id)"},
+        401: {"description": "Token Bearer ausente o inválido"},
+        404: {"description": "Transacción no encontrada o expirada"},
+    }
+)
 def endpoint_notificacion(
-    payload: dict,
+    payload: AuthNotifyPayload,
     background_tasks: BackgroundTasks,
-    authorization: str | None = Header(None),
+    authorization: str | None = Header(None, description="Encabezado 'Bearer <client_notification_token>' enviado por RENIEC"),
     session: Session = Depends(get_session),
 ):
     """
@@ -268,7 +305,7 @@ def endpoint_notificacion(
         raise HTTPException(status_code=401, detail="Encabezado Authorization Bearer requerido")
 
     incoming_token = authorization.split("Bearer ", 1)[1].strip()
-    auth_req_id = payload.get("auth_req_id")
+    auth_req_id = payload.auth_req_id
 
     if not auth_req_id:
         raise HTTPException(status_code=400, detail="auth_req_id requerido en el body")
@@ -287,8 +324,27 @@ def endpoint_notificacion(
     return AuthNotifyResponse(status="received")
 
 
-@router.get("/status", response_model=AuthStatusResponse, summary="Consulta de estado de la transacción CIBA")
-@router.get("/{auth_req_id}/status", response_model=AuthStatusResponse)
+@router.get(
+    "/status",
+    response_model=AuthStatusResponse,
+    summary="Consulta de estado de la transacción CIBA",
+    description="""
+Permite al frontend consultar el estado actual de la autenticación.
+
+**Parámetros:**
+* `auth_req_id`: Identificador de la transacción devuelto en `/start`.
+* `check_reniec`: Si es `true` (por ejemplo, cuando el usuario presiona el botón *"Ya me autentiqué en mi celular"*), el BFF realiza una consulta activa a `/service/ciba/token` de RENIEC para confirmar si el ciudadano ya aprobó, sin esperar al webhook.
+    """,
+    responses={
+        200: {"description": "Estado retornado (PENDING, APPROVED, REJECTED, EXPIRED, ERROR)"},
+        404: {"description": "Transacción no encontrada o vencida"},
+    }
+)
+@router.get(
+    "/{auth_req_id}/status",
+    response_model=AuthStatusResponse,
+    include_in_schema=False
+)
 def consultar_estado(
     auth_req_id: str,
     check_reniec: bool = Query(
