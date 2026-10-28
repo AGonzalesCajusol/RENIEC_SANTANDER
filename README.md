@@ -83,7 +83,7 @@ Flujo desacoplado en el que el BFF solicita la autorización a ID-Perú (`/servi
 | 3 | **`RENIEC_CLIENT_ID`** | Identificador de cliente asignado formalmente por RENIEC a Santander. | Credencial entregada por RENIEC |
 | 4 | **`RENIEC_CLIENT_SECRET`** | Secreto de cliente asignado por RENIEC (resguardado en el BFF). | Credencial entregada por RENIEC |
 | 5 | **`RENIEC_REFERER`** | Dominio corporativo (`santander.com.pe`) dado de alta en el WAF de RENIEC. | ✅ Configurado |
-| 6 | **`URL_NOTIFY`** | URL pública del Webhook (`https://dominio-banco/api/auth/notify`) **registrada formalmente ante RENIEC**. | Requiere dominio/IP pública registrada |
+| 6 | **`URL_NOTIFY_ID_PERU`** | URL pública del Webhook (`https://dominio-banco/api/auth/notify`) **registrada formalmente ante RENIEC**. | Requiere dominio/IP pública registrada |
 | 7 | **Conectividad de Red** | Conectividad saliente HTTPS a `idaas2.reniec.gob.pe` y puerto 443 abierto para webhook. | Configuración Firewall / DMZ |
 | 8 | **`DATABASE_URL`** | Conexión a base de datos PostgreSQL (`ciba_transactions`). | ✅ Configurado y operativo |
 | 9 | **App Móvil ID Perú** | App **ID Perú** instalada en el teléfono para biometría facial (`face_mobile`) o DNIe (`pki_dnie`). | Del lado del usuario |
@@ -136,7 +136,7 @@ RENIEC_BASE_URL=https://idaas2.reniec.gob.pe
 RENIEC_CLIENT_ID=tu_client_id
 RENIEC_CLIENT_SECRET=tu_client_secret
 RENIEC_REFERER=santander.com.pe
-URL_NOTIFY=http://localhost:8000/api/auth/notify
+URL_NOTIFY_ID_PERU=http://localhost:8000/api/auth/notify
 
 # Base de Datos PostgreSQL
 DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5435/reniec_santander_db

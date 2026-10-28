@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     RENIEC_CLIENT_SECRET: str = "tu_client_secret"
     RENIEC_REFERER: str = "santander.com.pe"
     
-    # URL pública o webhook registrada ante RENIEC
-    URL_NOTIFY: str = "http://localhost:8000/api/auth/notify"
+    # URL pública o webhook registrada ante RENIEC para notificaciones CIBA
+    URL_NOTIFY_ID_PERU: str = "http://localhost:8000/api/auth/notify"
     
     # Configuración de timeout y reintentos
     REQUEST_TIMEOUT: int = 15
